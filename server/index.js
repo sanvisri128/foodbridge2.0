@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import authRoutes from './routes/auth.js';
 import donationRoutes from './routes/donations.js';
+import notificationRoutes from './routes/notifications.js';
+import requestRoutes from './routes/requests.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -17,22 +19,28 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ─── Middleware ───────────────────────────────────────────────
-// Allow cross-origin requests from the Vite dev server (port 5173)
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:4173'] }));
+// Allow cross-origin requests from the Vite dev server (port 5173 / 4173)
+app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:4173', 'http://127.0.0.1:5173'] }));
 
 // Parse incoming JSON request bodies
 app.use(express.json());
 
 // ─── Routes ──────────────────────────────────────────────────
-// Authentication routes: /api/auth/register, /api/auth/login
+// Authentication & Profile routes: /api/auth
 app.use('/api/auth', authRoutes);
 
-// Donation CRUD + claim routes: /api/donations
+// Donation CRUD, claim, verification, & platform stats: /api/donations
 app.use('/api/donations', donationRoutes);
+
+// In-app notifications: /api/notifications
+app.use('/api/notifications', notificationRoutes);
+
+// Community food requests: /api/requests
+app.use('/api/requests', requestRoutes);
 
 // Health-check endpoint to verify server is running
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', message: 'FoodBridge API is running' });
+  res.json({ status: 'ok', message: 'FoodBridge API 2.0 is running smoothly' });
 });
 
 // ─── MongoDB Connection ───────────────────────────────────────
