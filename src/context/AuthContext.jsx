@@ -8,9 +8,10 @@ import axios from 'axios';
 // Create the context
 const AuthContext = createContext(null);
 
-// Axios base URL — all /api requests proxy to Express in dev
-// and hit the same origin in production
-axios.defaults.baseURL = '';
+// Axios base URL:
+// - In dev: defaults to '' (proxied by Vite to localhost:5000)
+// - In production: uses VITE_API_BASE_URL (e.g. https://foodbridge-backend.onrender.com)
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || '';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
