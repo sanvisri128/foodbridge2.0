@@ -1,10 +1,15 @@
-// Authentication routes — register and login
+// Authentication routes — register, login, me, and profile management
 // POST /api/auth/register  → create a new account
 // POST /api/auth/login     → authenticate and receive a JWT
+// GET  /api/auth/me        → get authenticated user info
+// PUT  /api/auth/profile   → update user profile details
+// GET  /api/auth/impact    → get user's individual impact stats
 
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Donation from '../models/Donation.js';
+import { protectRoute } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -93,8 +98,6 @@ router.post('/login', async (req, res) => {
 
 // ─── Get current user (protected) ─────────────────────────────
 // Used by the frontend to re-hydrate auth state from a stored token
-import { protectRoute } from '../middleware/authMiddleware.js';
-
 router.get('/me', protectRoute, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
@@ -105,4 +108,77 @@ router.get('/me', protectRoute, async (req, res) => {
   }
 });
 
+// ─── Update Profile (protected) ───────────────────────────────
+router.put('/profile', protectRoute, async (req, res) => {
+  try {
+    const { name, phone, description } = req.body;
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: 'User not found.' });
+
+    if (name) user.name = name.trim();
+    if (phone !== undefined) user.phone = phone.trim();
+    if (description !== undefined) user.description = description.trim();
+
+    await user.save();
+    res.json({ message: 'Profile updated successfully!', user });
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    console.error('Profile update error:', err);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// ─── User Individual Impact Stats (protected) ──────────────────
+router.get('/impact', protectRoute, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const role = req.user.role;
+
+    if (role === 'provider') {
+      const allMyDonations = await Donation.find({ donatedBy: userId });
+      const completedDonations = allMyDonations.filter(
+        (d) => d.status === 'completed' || d.claimed === true
+      );
+      const activeDonations = allMyDonations.filter(
+        (d) => !d.claimed && new Date(d.expiryTime) > new Date()
+      );
+
+      // Estimate servings
+      const totalServings = completedDonations.reduce((acc, curr) => acc + (curr.servings || 15), 0);
+      const co2SavedKg = Math.round(totalServings * 0.8 * 10) / 10; // ~0.8kg CO2e per meal saved
+
+      return res.json({
+        role: 'provider',
+        totalDonations: allMyDonations.length,
+        completedDonations: completedDonations.length,
+        activeDonations: activeDonations.length,
+        totalMealsRescued: totalServings,
+        co2SavedKg,
+      });
+    } else {
+      // NGO impact
+      const allMyClaims = await Donation.find({ claimedBy: userId });
+      const completedClaims = allMyClaims.filter((d) => d.status === 'completed');
+      const totalServings = allMyClaims.reduce((acc, curr) => acc + (curr.servings || 15), 0);
+      const co2SavedKg = Math.round(totalServings * 0.8 * 10) / 10;
+
+      return res.json({
+        role: 'ngo',
+        totalClaims: allMyClaims.length,
+        completedClaims: completedClaims.length,
+        activeClaims: allMyClaims.filter((d) => d.status === 'claimed' || d.status === 'in_transit').length,
+        totalMealsDistributed: totalServings,
+        co2SavedKg,
+      });
+    }
+  } catch (err) {
+    console.error('Impact stats error:', err);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
 export default router;
+
