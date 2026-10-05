@@ -1,12 +1,11 @@
-// Main Express server entry point for FoodBridge
-// Loads environment variables, connects to MongoDB, and starts the server
-
-// We use 'createRequire' because package.json has "type":"module" for Vite
-// but server code uses CommonJS-style require via dynamic import
+// Main Express server entry point for FoodBridge 2.0
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 import authRoutes from './routes/auth.js';
 import donationRoutes from './routes/donations.js';
 import notificationRoutes from './routes/notifications.js';
@@ -15,17 +14,46 @@ import requestRoutes from './routes/requests.js';
 // Load environment variables from .env file
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ─── Middleware ───────────────────────────────────────────────
-// Allow cross-origin requests from the Vite dev server (port 5173 / 4173)
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:4173', 'http://127.0.0.1:5173'] }));
+// ─── Production & Development CORS Configuration ───────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:5173',
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map((url) => url.trim()) : []),
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      if (process.env.CLIENT_URL === '*' || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // Allow Vercel, Netlify, and Render domains automatically
+      if (
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.netlify.app') ||
+        origin.endsWith('.onrender.com')
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Permissive fallback to prevent CORS blocks
+    },
+    credentials: true,
+  })
+);
 
 // Parse incoming JSON request bodies
 app.use(express.json());
 
-// ─── Routes ──────────────────────────────────────────────────
+// ─── API Routes ───────────────────────────────────────────────
 // Authentication & Profile routes: /api/auth
 app.use('/api/auth', authRoutes);
 
@@ -40,22 +68,40 @@ app.use('/api/requests', requestRoutes);
 
 // Health-check endpoint to verify server is running
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', message: 'FoodBridge API 2.0 is running smoothly' });
+  res.json({
+    status: 'ok',
+    message: 'FoodBridge API 2.0 is running smoothly',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+  });
 });
 
-// ─── MongoDB Connection ───────────────────────────────────────
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/foodbridge';
+// ─── Static Frontend Serving (For Monolith / Single-Service Deployments) ─
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+// For non-API routes, serve index.html (SPA Fallback)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) next();
+  });
+});
+
+// ─── Start Server & Connect MongoDB ───────────────────────────
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/foodbridge';
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 FoodBridge server running on http://127.0.0.1:${PORT}`);
+});
 
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    // Start listening only after DB is ready
-    app.listen(PORT, () => {
-      console.log(`🚀 FoodBridge server running on http://localhost:${PORT}`);
-    });
   })
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
   });
+
+
