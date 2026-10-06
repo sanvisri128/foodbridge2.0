@@ -1,5 +1,5 @@
 // ProviderDashboard — dedicated control hub for food providers (restaurants, hostels, canteens)
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -33,7 +33,7 @@ export default function ProviderDashboard() {
   // Modal view state
   const [activeModalDonation, setActiveModalDonation] = useState(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [donationsRes, impactRes] = await Promise.all([
@@ -47,11 +47,11 @@ export default function ProviderDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handleQuickOtpVerify = async (e) => {
     e.preventDefault();

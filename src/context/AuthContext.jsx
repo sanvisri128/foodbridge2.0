@@ -18,6 +18,22 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('fb_token') || null);
   const [loading, setLoading] = useState(true);
 
+  // Clear everything on logout
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('fb_token');
+    delete axios.defaults.headers.common['Authorization'];
+  };
+
+  // Called after a successful login or register response
+  const login = (userData, jwtToken) => {
+    setUser(userData);
+    setToken(jwtToken);
+    localStorage.setItem('fb_token', jwtToken);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${jwtToken}`;
+  };
+
   // Attach JWT to every outgoing Axios request if we have one
   useEffect(() => {
     if (token) {
@@ -47,22 +63,6 @@ export function AuthProvider({ children }) {
     hydrateUser();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Called after a successful login or register response
-  const login = (userData, jwtToken) => {
-    setUser(userData);
-    setToken(jwtToken);
-    localStorage.setItem('fb_token', jwtToken);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${jwtToken}`;
-  };
-
-  // Clear everything on logout
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('fb_token');
-    delete axios.defaults.headers.common['Authorization'];
-  };
-
   return (
     <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
@@ -71,6 +71,7 @@ export function AuthProvider({ children }) {
 }
 
 // Custom hook — use this instead of useContext(AuthContext) directly
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');

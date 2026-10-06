@@ -62,7 +62,7 @@ export default function FoodListingsPage() {
 
       const { data } = await axios.get('/api/donations', { params });
       setDonations(data.donations || []);
-    } catch (err) {
+    } catch {
       setError('Failed to load donations. Please try again.');
     } finally {
       setLoading(false);

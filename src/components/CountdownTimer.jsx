@@ -1,11 +1,9 @@
 // CountdownTimer — dynamic, second-by-second countdown for food expiry
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Clock, AlertTriangle } from 'lucide-react';
 
 export default function CountdownTimer({ expiryTime, compact = false }) {
-  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-
-  function calculateTimeLeft() {
+  const calculateTimeLeft = useCallback(() => {
     const diff = new Date(expiryTime).getTime() - Date.now();
     if (diff <= 0) {
       return { total: 0, hours: 0, minutes: 0, seconds: 0, expired: true, urgent: true };
@@ -25,14 +23,16 @@ export default function CountdownTimer({ expiryTime, compact = false }) {
       urgent,
       warning,
     };
-  }
+  }, [expiryTime]);
+
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
     return () => clearInterval(interval);
-  }, [expiryTime]);
+  }, [calculateTimeLeft]);
 
   if (timeLeft.expired) {
     return (

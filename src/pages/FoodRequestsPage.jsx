@@ -64,7 +64,7 @@ export default function FoodRequestsPage() {
 
       const { data } = await axios.get('/api/requests', { params });
       setRequests(data.requests || []);
-    } catch (err) {
+    } catch {
       setError('Failed to load food requests.');
     } finally {
       setLoading(false);
@@ -224,6 +224,14 @@ export default function FoodRequestsPage() {
             </select>
           </div>
         </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl p-4 text-sm mb-6">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            {error}
+          </div>
+        )}
 
         {/* List of Requests */}
         {loading ? (

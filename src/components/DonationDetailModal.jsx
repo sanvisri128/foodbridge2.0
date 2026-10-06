@@ -71,7 +71,7 @@ export default function DonationDetailModal({
     setActionSuccess('');
 
     try {
-      const { data } = await axios.post(`/api/donations/${donation._id}/verify-pickup`, {
+      await axios.post(`/api/donations/${donation._id}/verify-pickup`, {
         pickupCode: verifyOtp.trim(),
       });
       setActionSuccess('Pickup verified successfully! Status marked as Completed.');

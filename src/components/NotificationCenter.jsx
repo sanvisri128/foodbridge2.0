@@ -1,5 +1,5 @@
 // NotificationCenter — in-app real-time notification popover for providers and NGOs
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -23,23 +23,23 @@ export default function NotificationCenter() {
   const [unreadCount, setUnreadCount] = useState(0);
   const popoverRef = useRef(null);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user) return;
     try {
       const { data } = await axios.get('/api/notifications');
       setNotifications(data.notifications || []);
       setUnreadCount(data.unreadCount || 0);
-    } catch (err) {
+    } catch {
       // silently handle background fetch errors
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchNotifications();
     // Poll every 25 seconds for new alerts
     const interval = setInterval(fetchNotifications, 25000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [fetchNotifications]);
 
   // Close when clicking outside
   useEffect(() => {

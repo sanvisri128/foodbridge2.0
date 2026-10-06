@@ -1,5 +1,5 @@
 // NGODashboard — comprehensive dashboard for NGO partners and community shelters
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -35,26 +35,16 @@ export default function NGODashboard() {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterDietary, setFilterDietary] = useState('');
 
-  const fetchAll = async () => {
-    fetchAvailable();
-    fetchClaimed();
-    fetchImpact();
-  };
-
-  useEffect(() => {
-    fetchAll();
-  }, []);
-
-  const fetchImpact = async () => {
+  const fetchImpact = useCallback(async () => {
     try {
       const { data } = await axios.get('/api/auth/impact');
       setImpact(data);
     } catch (err) {
       console.error(err);
     }
-  };
+  }, []);
 
-  const fetchAvailable = async () => {
+  const fetchAvailable = useCallback(async () => {
     setAvailableLoading(true);
     try {
       const params = {};
@@ -69,9 +59,9 @@ export default function NGODashboard() {
     } finally {
       setAvailableLoading(false);
     }
-  };
+  }, [filterCategory, filterDietary, filterLocation]);
 
-  const fetchClaimed = async () => {
+  const fetchClaimed = useCallback(async () => {
     setClaimedLoading(true);
     try {
       const { data } = await axios.get('/api/donations/claimed');
@@ -81,7 +71,17 @@ export default function NGODashboard() {
     } finally {
       setClaimedLoading(false);
     }
-  };
+  }, []);
+
+  const fetchAll = useCallback(async () => {
+    fetchAvailable();
+    fetchClaimed();
+    fetchImpact();
+  }, [fetchAvailable, fetchClaimed, fetchImpact]);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   const handleClaim = async (donationId) => {
     setClaimingId(donationId);

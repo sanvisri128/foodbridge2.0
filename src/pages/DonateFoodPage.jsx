@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -61,11 +61,7 @@ export default function DonateFoodPage() {
   const [listLoading, setListLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    fetchMyDonations();
-  }, []);
-
-  const fetchMyDonations = async () => {
+  const fetchMyDonations = useCallback(async () => {
     try {
       setListLoading(true);
       const { data } = await axios.get('/api/donations/my');
@@ -75,7 +71,11 @@ export default function DonateFoodPage() {
     } finally {
       setListLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchMyDonations();
+  }, [fetchMyDonations]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));

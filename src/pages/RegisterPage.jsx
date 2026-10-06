@@ -1,5 +1,5 @@
 // RegisterPage — account creation for providers and NGOs
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -11,11 +11,6 @@ import {
 export default function RegisterPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
-
-  if (user) {
-    navigate(user.role === 'ngo' ? '/dashboard' : '/donate');
-    return null;
-  }
 
   const [formData, setFormData] = useState({
     name: '',
@@ -29,6 +24,13 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === 'ngo' ? '/dashboard' : '/donate', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));

@@ -21,7 +21,7 @@ export default function ProfileModal({ onClose }) {
       try {
         const { data } = await axios.get('/api/auth/impact');
         setImpactStats(data);
-      } catch (err) {
+      } catch {
         // ignore
       }
     };
