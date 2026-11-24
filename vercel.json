@@ -1,8 +1,14 @@
+
 {
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://foodbridge2-0.onrender.com/api/$1"
+    },
     {
       "source": "/(.*)",
       "destination": "/"
     }
   ]
 }
+
